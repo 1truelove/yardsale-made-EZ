@@ -79,6 +79,10 @@
     .item-tile { background: white; border: 1px solid var(--border); border-radius: 6px; padding: 0.75rem; text-align: center; cursor: pointer; }
     .item-tile.sold { opacity: 0.5; pointer-events: none; text-decoration: line-through; }
     
+    /* QR Code Display Box */
+    .qr-container { text-align: center; margin-top: 1rem; padding: 1rem; background: #f1f5f9; border-radius: 8px; display: none; }
+    .qr-container img { width: 180px; height: 180px; border-radius: 8px; border: 2px solid var(--border); }
+
     /* Map Layout */
     #map { height: 50vh; width: 100%; border-radius: 8px; border: 1px solid var(--border); }
 
@@ -106,11 +110,18 @@
       <p style="font-size: 1.2rem; font-weight: bold;">Total: $<span id="cart-total">0.00</span></p>
       
       <label style="margin-top: 1rem; display: block;">Payment Method:</label>
-      <select id="payment-method">
+      <select id="payment-method" onchange="updateQROverlay()">
         <option value="Cash">Cash</option>
         <option value="Venmo">Venmo</option>
         <option value="CashApp">CashApp</option>
       </select>
+
+      <!-- Dynamic QR Code Container -->
+      <div id="qr-box" class="qr-container">
+        <p id="qr-title" style="font-weight: bold; margin-bottom: 0.5rem;"></p>
+        <img id="qr-img" src="" alt="Payment QR Code" />
+        <p id="qr-handle" style="font-size: 0.85rem; color: #64748b; margin-top: 0.5rem;"></p>
+      </div>
 
       <button class="btn-success" style="margin-top: 1rem;" onclick="checkout()">Complete Sale</button>
     </div>
@@ -138,8 +149,16 @@
     <div id="map" style="margin-top: 1rem;"></div>
   </section>
 
-  <!-- VIEW 4: INVENTORY MANAGEMENT -->
+  <!-- VIEW 4: INVENTORY & SETTINGS -->
   <section id="inventory-view" class="view">
+    <h2>Payment Settings</h2>
+    <div class="card">
+      <h3>Digital Handles</h3>
+      <input type="text" id="venmo-handle" placeholder="Venmo Username (e.g. John-Doe)" />
+      <input type="text" id="cashapp-tag" placeholder="CashApp Tag (e.g. $JohnDoe)" />
+      <button class="btn-primary" onclick="saveHandles()">Save Handles</button>
+    </div>
+
     <h2>Inventory</h2>
     <div class="card">
       <h3>Add Item</h3>
@@ -160,7 +179,7 @@
     <button class="nav-btn active" onclick="switchTab('pos-view', this)">🛒 POS</button>
     <button class="nav-btn" onclick="switchTab('negotiate-view', this)">🤝 Negotiate</button>
     <button class="nav-btn" onclick="switchTab('map-view', this)">🗺️ Map</button>
-    <button class="nav-btn" onclick="switchTab('inventory-view', this)">📦 Inventory</button>
+    <button class="nav-btn" onclick="switchTab('inventory-view', this)">📦 Settings</button>
   </nav>
 
   <!-- Leaflet JS -->
@@ -172,9 +191,14 @@
       { id: 1, name: 'Tool Box', price: 20.00, minPrice: 15.00, sold: false },
       { id: 2, name: 'Lawn Mower', price: 50.00, minPrice: 35.00, sold: false }
     ];
+    let handles = JSON.parse(localStorage.getItem('ys_handles')) || { venmo: '', cashapp: '' };
     let cart = [];
     let mapInitialized = false;
     let map;
+
+    // Load saved handles into input fields
+    document.getElementById('venmo-handle').value = handles.venmo || '';
+    document.getElementById('cashapp-tag').value = handles.cashapp || '';
 
     // Save State
     function saveData() {
@@ -182,6 +206,15 @@
       renderPOS();
       renderInventory();
       populateNegotiateDropdown();
+    }
+
+    function saveHandles() {
+      let v = document.getElementById('venmo-handle').value.trim().replace('@', '');
+      let c = document.getElementById('cashapp-tag').value.trim().replace('$', '');
+      handles = { venmo: v, cashapp: c };
+      localStorage.setItem('ys_handles', JSON.stringify(handles));
+      alert('Payment handles saved successfully!');
+      updateQROverlay();
     }
 
     // Navigation Logic
@@ -200,7 +233,7 @@
       }
     }
 
-    // POS Functions
+    // POS & QR Code Functions
     function renderPOS() {
       const posContainer = document.getElementById('pos-items');
       posContainer.innerHTML = '';
@@ -224,11 +257,61 @@
       if (cart.length === 0) {
         cartContainer.innerHTML = 'No items selected.';
         document.getElementById('cart-total').innerText = '0.00';
+        updateQROverlay();
         return;
       }
       cartContainer.innerHTML = cart.map(i => `<div>${i.name} - $${i.price.toFixed(2)}</div>`).join('');
       const total = cart.reduce((sum, i) => sum + i.price, 0);
       document.getElementById('cart-total').innerText = total.toFixed(2);
+      updateQROverlay();
+    }
+
+    function updateQROverlay() {
+      const method = document.getElementById('payment-method').value;
+      const qrBox = document.getElementById('qr-box');
+      const qrTitle = document.getElementById('qr-title');
+      const qrImg = document.getElementById('qr-img');
+      const qrHandle = document.getElementById('qr-handle');
+
+      if (method === 'Cash' || cart.length === 0) {
+        qrBox.style.display = 'none';
+        return;
+      }
+
+      let url = '';
+      let text = '';
+
+      if (method === 'Venmo') {
+        if (!handles.venmo) {
+          qrBox.style.display = 'block';
+          qrTitle.innerText = 'Venmo Selected';
+          qrImg.src = '';
+          qrImg.style.display = 'none';
+          qrHandle.innerText = 'Please set your Venmo username in Settings tab.';
+          return;
+        }
+        url = `https://venmo.com/${handles.venmo}`;
+        text = `@${handles.venmo}`;
+        qrTitle.innerText = 'Scan to Pay with Venmo';
+      } else if (method === 'CashApp') {
+        if (!handles.cashapp) {
+          qrBox.style.display = 'block';
+          qrTitle.innerText = 'CashApp Selected';
+          qrImg.src = '';
+          qrImg.style.display = 'none';
+          qrHandle.innerText = 'Please set your CashApp Tag in Settings tab.';
+          return;
+        }
+        url = `https://cash.app/$${handles.cashapp}`;
+        text = `$${handles.cashapp}`;
+        qrTitle.innerText = 'Scan to Pay with CashApp';
+      }
+
+      // Generate dynamic QR code image via free QR generator API
+      qrImg.style.display = 'inline-block';
+      qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(url)}`;
+      qrHandle.innerText = text;
+      qrBox.style.display = 'block';
     }
 
     function checkout() {
@@ -251,7 +334,7 @@
       let minPrice = parseFloat(document.getElementById('item-min-price').value);
       
       if (!name || isNaN(price)) return alert('Enter valid item name and price');
-      if (isNaN(minPrice)) minPrice = price; // Default minPrice to asking price if left blank
+      if (isNaN(minPrice)) minPrice = price;
 
       items.push({ id: Date.now(), name, price, minPrice, sold: false });
       document.getElementById('item-name').value = '';
@@ -310,11 +393,9 @@
 
       if (!item || isNaN(offer) || offer <= 0) return alert('Please enter a valid offer.');
 
-      // Add User Message
       chat.innerHTML += `<div class="chat-msg chat-user">I'll offer $${offer.toFixed(2)}</div>`;
       offerInput.value = '';
 
-      // AI Logic Evaluation
       const minPrice = item.minPrice || item.price;
       
       setTimeout(() => {
@@ -325,7 +406,6 @@
           chat.innerHTML += `<div class="chat-msg chat-bot">Deal accepted! $${offer.toFixed(2)} meets the reserve. Item added to cart!</div>`;
           addToCart(item);
         } else {
-          // Calculate Counter Offer halfway between offer and asking price
           const counter = Math.ceil((item.price + minPrice) / 2);
           if (offer < minPrice * 0.6) {
             chat.innerHTML += `<div class="chat-msg chat-bot">That's a bit too low for ${item.name}. Lowest we can do is $${counter.toFixed(2)}.</div>`;
@@ -364,4 +444,3 @@
   </script>
 </body>
 </html>
-
