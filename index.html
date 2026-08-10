@@ -1,383 +1,269 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Yardsales-Made-EZ</title>
-    <style>
-        :root {
-            --primary: #2e7d32;
-            --primary-dark: #1b5e20;
-            --accent: #f57c00;
-            --bg: #f4f6f8;
-            --surface: #ffffff;
-            --text: #333333;
-            --text-muted: #666666;
-            --border: #e0e0e0;
-        }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Yardsales-Made-EZ</title>
+  
+  <!-- PWA & Mobile Settings -->
+  <meta name="theme-color" content="#2563eb" />
+  <link rel="manifest" href="manifest.json" />
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-        }
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
-        body {
-            background-color: var(--bg);
-            color: var(--text);
-            display: flex;
-            flex-direction: column;
-            min-height: 100vh;
-        }
+  <style>
+    :root {
+      --primary: #2563eb;
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --text: #0f172a;
+      --border: #e2e8f0;
+      --success: #16a34a;
+    }
 
-        header {
-            background-color: var(--primary);
-            color: white;
-            padding: 1rem 2rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background-color: var(--bg); color: var(--text); padding-bottom: 70px; }
 
-        header h1 {
-            font-size: 1.5rem;
-            font-weight: 700;
-            letter-spacing: -0.5px;
-        }
+    header {
+      background: var(--primary);
+      color: white;
+      padding: 1rem;
+      text-align: center;
+      font-weight: bold;
+      font-size: 1.2rem;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+    }
 
-        nav button {
-            background: transparent;
-            border: 1px solid white;
-            color: white;
-            padding: 0.5rem 1rem;
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: 600;
-            margin-left: 0.5rem;
-            transition: background 0.2s;
-        }
+    /* Bottom Navigation Tabs */
+    nav {
+      position: fixed;
+      bottom: 0;
+      width: 100%;
+      background: white;
+      display: flex;
+      border-top: 1px solid var(--border);
+      z-index: 1000;
+    }
 
-        nav button:hover, nav button.active {
-            background: white;
-            color: var(--primary);
-        }
+    .nav-btn {
+      flex: 1;
+      padding: 0.75rem 0;
+      border: none;
+      background: none;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #64748b;
+      cursor: pointer;
+    }
 
-        main {
-            flex: 1;
-            max-width: 1200px;
-            width: 100%;
-            margin: 2rem auto;
-            padding: 0 1rem;
-        }
+    .nav-btn.active {
+      color: var(--primary);
+      border-top: 3px solid var(--primary);
+    }
 
-        .tab-content {
-            display: none;
-        }
+    /* Views */
+    .view { display: none; padding: 1rem; }
+    .view.active { display: block; }
 
-        .tab-content.active {
-            display: block;
-        }
+    /* Cards & Forms */
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 1rem; margin-bottom: 1rem; }
+    input, select, button { width: 100%; padding: 0.75rem; margin-top: 0.5rem; border-radius: 6px; border: 1px solid var(--border); font-size: 1rem; }
+    button.btn-primary { background: var(--primary); color: white; border: none; font-weight: bold; cursor: pointer; }
+    button.btn-success { background: var(--success); color: white; border: none; font-weight: bold; cursor: pointer; }
 
-        /* Forms */
-        .card {
-            background: var(--surface);
-            padding: 2rem;
-            border-radius: 8px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-            margin-bottom: 2rem;
-        }
-
-        .card h2 {
-            margin-bottom: 1rem;
-            color: var(--primary-dark);
-        }
-
-        .form-group {
-            margin-bottom: 1.25rem;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 0.5rem;
-            font-weight: 600;
-            color: var(--text);
-        }
-
-        .form-group input, .form-group textarea, .form-group select {
-            width: 100%;
-            padding: 0.75rem;
-            border: 1px solid var(--border);
-            border-radius: 4px;
-            font-size: 1rem;
-        }
-
-        .form-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1rem;
-        }
-
-        .btn-primary {
-            background-color: var(--primary);
-            color: white;
-            border: none;
-            padding: 0.75rem 1.5rem;
-            border-radius: 4px;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            width: 100%;
-        }
-
-        .btn-primary:hover {
-            background-color: var(--primary-dark);
-        }
-
-        /* Grid Feed */
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 1.5rem;
-        }
-
-        .item-card {
-            background: var(--surface);
-            border-radius: 8px;
-            overflow: hidden;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-            display: flex;
-            flex-direction: column;
-        }
-
-        .item-card img {
-            width: 100%;
-            height: 200px;
-            object-fit: cover;
-            background-color: #eee;
-        }
-
-        .item-card-body {
-            padding: 1rem;
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .item-card-title {
-            font-size: 1.1rem;
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-        }
-
-        .item-card-price {
-            font-size: 1.25rem;
-            color: var(--accent);
-            font-weight: 700;
-            margin-bottom: 0.5rem;
-        }
-
-        .item-card-desc {
-            color: var(--text-muted);
-            font-size: 0.9rem;
-            margin-bottom: 1rem;
-            flex: 1;
-        }
-
-        /* Pricing Table */
-        .pricing-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 1.5rem;
-            margin-top: 1rem;
-        }
-
-        .pricing-card {
-            background: var(--surface);
-            border: 2px solid var(--border);
-            border-radius: 8px;
-            padding: 2rem;
-            text-align: center;
-        }
-
-        .pricing-card.featured {
-            border-color: var(--primary);
-            position: relative;
-        }
-
-        .pricing-card .price {
-            font-size: 2rem;
-            font-weight: 700;
-            margin: 1rem 0;
-            color: var(--primary);
-        }
-
-        .pricing-card ul {
-            list-style: none;
-            margin-bottom: 1.5rem;
-            text-align: left;
-        }
-
-        .pricing-card li {
-            padding: 0.5rem 0;
-            border-bottom: 1px solid var(--border);
-        }
-
-        footer {
-            text-align: center;
-            padding: 1.5rem;
-            background: var(--surface);
-            border-top: 1px solid var(--border);
-            color: var(--text-muted);
-            font-size: 0.9rem;
-        }
-    </style>
+    /* POS Layout */
+    .item-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 0.5rem; margin-bottom: 1rem; }
+    .item-tile { background: white; border: 1px solid var(--border); border-radius: 6px; padding: 0.75rem; text-align: center; cursor: pointer; }
+    .item-tile.sold { opacity: 0.5; pointer-events: none; text-decoration: line-through; }
+    
+    /* Map Layout */
+    #map { height: 60vh; width: 100%; border-radius: 8px; border: 1px solid var(--border); }
+  </style>
 </head>
 <body>
 
-    <header>
-        <h1>Yardsales-Made-EZ</h1>
-        <nav>
-            <button class="nav-btn active" onclick="switchTab('browse')">Browse Sales</button>
-            <button class="nav-btn" onclick="switchTab('post')">Post an Item</button>
-            <button class="nav-btn" onclick="switchTab('pricing')">Pro Plans</button>
-        </nav>
-    </header>
+  <header>Yardsales-Made-EZ</header>
 
-    <main>
-        <!-- BROWSE TAB -->
-        <section id="browse" class="tab-content active">
-            <h2 style="margin-bottom: 1.5rem;">Local Items & Sales</h2>
-            <div class="grid" id="items-grid">
-                <!-- Sample Items -->
-                <div class="item-card">
-                    <img src="https://via.placeholder.com/300x200?text=Vintage+Tools" alt="Item Image">
-                    <div class="item-card-body">
-                        <div class="item-card-title">Vintage Hand Tools Set</div>
-                        <div class="item-card-price">$45.00</div>
-                        <div class="item-card-desc">Collection of antique woodworking tools in great condition.</div>
-                        <button class="btn-primary" style="margin-top: auto;">Contact Seller</button>
-                    </div>
-                </div>
-                <div class="item-card">
-                    <img src="https://via.placeholder.com/300x200?text=Yard+Sale+Sign" alt="Item Image">
-                    <div class="item-card-body">
-                        <div class="item-card-title">Multi-Family Moving Sale</div>
-                        <div class="item-card-price">Saturday 8 AM</div>
-                        <div class="item-card-desc">Furniture, electronics, tools, and household items. Everything must go!</div>
-                        <button class="btn-primary" style="margin-top: auto;">View Location</button>
-                    </div>
-                </div>
-            </div>
-        </section>
+  <!-- VIEW 1: POS / CHECKOUT -->
+  <section id="pos-view" class="view active">
+    <h2>Point of Sale</h2>
+    <p style="font-size: 0.9rem; color: #64748b; margin-bottom: 1rem;">Tap available items to add to cart.</p>
+    
+    <div id="pos-items" class="item-grid"></div>
 
-        <!-- POST TAB -->
-        <section id="post" class="tab-content">
-            <div class="card">
-                <h2>Post a Sale or Item</h2>
-                <form id="post-form" onsubmit="handlePost(event)">
-                    <div class="form-group">
-                        <label for="title">Title / Sale Name</label>
-                        <input type="text" id="title" required placeholder="e.g., Huge Neighborhood Yard Sale">
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="price">Price (Leave blank for general sale)</label>
-                            <input type="text" id="price" placeholder="e.g., $15.00 or Various">
-                        </div>
-                        <div class="form-group">
-                            <label for="category">Category</label>
-                            <select id="category">
-                                <option>General Yard Sale</option>
-                                <option>Tools & Equipment</option>
-                                <option>Furniture</option>
-                                <option>Antiques & Collectibles</option>
-                                <option>Electronics</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label for="description">Description & Details</label>
-                        <textarea id="description" rows="4" required placeholder="List featured items, dates, and times..."></textarea>
-                    </div>
-                    <button type="submit" class="btn-primary">Publish Listing</button>
-                </form>
-            </div>
-        </section>
+    <div class="card">
+      <h3>Current Cart</h3>
+      <div id="cart-list" style="margin: 0.5rem 0;">No items selected.</div>
+      <p style="font-size: 1.2rem; font-weight: bold;">Total: $<span id="cart-total">0.00</span></p>
+      
+      <label style="margin-top: 1rem; display: block;">Payment Method:</label>
+      <select id="payment-method">
+        <option value="Cash">Cash</option>
+        <option value="Venmo">Venmo</option>
+        <option value="CashApp">CashApp</option>
+      </select>
 
-        <!-- PRICING TAB -->
-        <section id="pricing" class="tab-content">
-            <h2 style="text-align: center; margin-bottom: 0.5rem;">Organizer & Seller Plans</h2>
-            <p style="text-align: center; color: var(--text-muted); margin-bottom: 2rem;">Upgrade your listings for maximum visibility.</p>
+      <button class="btn-success" style="margin-top: 1rem;" onclick="checkout()">Complete Sale</button>
+    </div>
+  </section>
 
-            <div class="pricing-grid">
-                <div class="pricing-card">
-                    <h3>Basic</h3>
-                    <div class="price">$0</div>
-                    <ul>
-                        <li>1 Listing at a time</li>
-                        <li>Standard map pin</li>
-                        <li>Active for 3 days</li>
-                    </ul>
-                    <button class="btn-primary">Current Plan</button>
-                </div>
-                <div class="pricing-card featured">
-                    <h3>Pro Seller</h3>
-                    <div class="price">$9.99</div>
-                    <ul>
-                        <li>Unlimited listings</li>
-                        <li>Featured badge & top placement</li>
-                        <li>Active for 14 days</li>
-                        <li>AI Auto-Pricing Guide</li>
-                    </ul>
-                    <button class="btn-primary">Upgrade to Pro</button>
-                </div>
-            </div>
-        </section>
-    </main>
+  <!-- VIEW 2: MAP & ROUTE -->
+  <section id="map-view" class="view">
+    <h2>Nearby Sales & Route</h2>
+    <div id="map" style="margin-top: 1rem;"></div>
+  </section>
 
-    <footer>
-        <p>&copy; 2026 Yardsales-Made-EZ. All rights reserved.</p>
-    </footer>
+  <!-- VIEW 3: INVENTORY MANAGEMENT -->
+  <section id="inventory-view" class="view">
+    <h2>Inventory</h2>
+    <div class="card">
+      <h3>Add Item</h3>
+      <input type="text" id="item-name" placeholder="Item Name (e.g., Circular Saw)" />
+      <input type="number" id="item-price" placeholder="Price ($)" step="0.01" />
+      <button class="btn-primary" onclick="addItem()">Add to Listing</button>
+    </div>
 
-    <script>
-        function switchTab(tabId) {
-            document.querySelectorAll('.tab-content').forEach(tab => {
-                tab.classList.remove('active');
-            });
-            document.querySelectorAll('.nav-btn').forEach(btn => {
-                btn.classList.remove('active');
-            });
+    <div class="card">
+      <h3>Item List</h3>
+      <div id="inventory-list"></div>
+    </div>
+  </section>
 
-            document.getElementById(tabId).classList.add('active');
-            event.target.classList.add('active');
-        }
+  <!-- NAVIGATION -->
+  <nav>
+    <button class="nav-btn active" onclick="switchTab('pos-view', this)">🛒 POS</button>
+    <button class="nav-btn" onclick="switchTab('map-view', this)">🗺️ Map</button>
+    <button class="nav-btn" onclick="switchTab('inventory-view', this)">📦 Inventory</button>
+  </nav>
 
-        function handlePost(event) {
-            event.preventDefault();
-            const title = document.getElementById('title').value;
-            const price = document.getElementById('price').value || 'Free/Various';
-            const description = document.getElementById('description').value;
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-            const grid = document.getElementById('items-grid');
-            const newCard = document.createElement('div');
-            newCard.className = 'item-card';
-            newCard.innerHTML = `
-                <img src="https://via.placeholder.com/300x200?text=${encodeURIComponent(title)}" alt="Item Image">
-                <div class="item-card-body">
-                    <div class="item-card-title">${title}</div>
-                    <div class="item-card-price">${price}</div>
-                    <div class="item-card-desc">${description}</div>
-                    <button class="btn-primary" style="margin-top: auto;">Contact Seller</button>
-                </div>
-            `;
+  <script>
+    // App State
+    let items = JSON.parse(localStorage.getItem('ys_items')) || [
+      { id: 1, name: 'Tool Box', price: 15.00, sold: false },
+      { id: 2, name: 'Lawn Mower', price: 45.00, sold: false }
+    ];
+    let cart = [];
+    let mapInitialized = false;
+    let map;
 
-            grid.prepend(newCard);
-            document.getElementById('post-form').reset();
-            switchTab('browse');
-            document.querySelectorAll('.nav-btn')[0].classList.add('active');
-        }
-    </script>
+    // Save State
+    function saveData() {
+      localStorage.setItem('ys_items', JSON.stringify(items));
+      renderPOS();
+      renderInventory();
+    }
+
+    // Navigation Logic
+    function switchTab(viewId, btn) {
+      document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+      document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+      
+      document.getElementById(viewId).classList.add('active');
+      btn.classList.add('active');
+
+      if (viewId === 'map-view' && !mapInitialized) {
+        initMap();
+      }
+    }
+
+    // POS Functions
+    function renderPOS() {
+      const posContainer = document.getElementById('pos-items');
+      posContainer.innerHTML = '';
+      items.forEach(item => {
+        const div = document.createElement('div');
+        div.className = `item-tile ${item.sold ? 'sold' : ''}`;
+        div.innerHTML = `<strong>${item.name}</strong><br>$${item.price.toFixed(2)}`;
+        div.onclick = () => addToCart(item);
+        posContainer.appendChild(div);
+      });
+    }
+
+    function addToCart(item) {
+      if (item.sold || cart.find(c => c.id === item.id)) return;
+      cart.push(item);
+      renderCart();
+    }
+
+    function renderCart() {
+      const cartContainer = document.getElementById('cart-list');
+      if (cart.length === 0) {
+        cartContainer.innerHTML = 'No items selected.';
+        document.getElementById('cart-total').innerText = '0.00';
+        return;
+      }
+      cartContainer.innerHTML = cart.map(i => `<div>${i.name} - $${i.price.toFixed(2)}</div>`).join('');
+      const total = cart.reduce((sum, i) => sum + i.price, 0);
+      document.getElementById('cart-total').innerText = total.toFixed(2);
+    }
+
+    function checkout() {
+      if (cart.length === 0) return alert('Cart is empty!');
+      const method = document.getElementById('payment-method').value;
+      cart.forEach(cartItem => {
+        const item = items.find(i => i.id === cartItem.id);
+        if (item) item.sold = true;
+      });
+      alert(`Sale completed via ${method}!`);
+      cart = [];
+      renderCart();
+      saveData();
+    }
+
+    // Inventory Functions
+    function addItem() {
+      const name = document.getElementById('item-name').value;
+      const price = parseFloat(document.getElementById('item-price').value);
+      if (!name || isNaN(price)) return alert('Enter valid name and price');
+
+      items.push({ id: Date.now(), name, price, sold: false });
+      document.getElementById('item-name').value = '';
+      document.getElementById('item-price').value = '';
+      saveData();
+    }
+
+    function renderInventory() {
+      const container = document.getElementById('inventory-list');
+      container.innerHTML = items.map(i => `
+        <div style="display:flex; justify-content:space-between; padding: 0.5rem 0; border-bottom: 1px solid #e2e8f0;">
+          <span>${i.name} (${i.sold ? '<strong>SOLD</strong>' : 'Available'})</span>
+          <span>$${i.price.toFixed(2)}</span>
+        </div>
+      `).join('');
+    }
+
+    // Map Functions
+    function initMap() {
+      mapInitialized = true;
+      // Default center: Lowell, MA area (42.6334, -71.3162)
+      map = L.map('map').setView([42.6334, -71.3162], 13);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '© OpenStreetMap'
+      }).addTo(map);
+
+      // Example sale location marker
+      L.marker([42.6334, -71.3162]).addTo(map)
+        .bindPopup('<b>Active Yard Sale</b><br>123 Main St<br>Tools, Furniture, Electronics')
+        .openPopup();
+    }
+
+    // Service Worker Registration for PWA
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js').catch(err => console.log('SW registration failed:', err));
+      });
+    }
+
+    // Initial Render
+    renderPOS();
+    renderInventory();
+  </script>
 </body>
 </html>
