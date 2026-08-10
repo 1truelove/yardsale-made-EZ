@@ -70,6 +70,10 @@
 
     /* Cards & Forms */
     .card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 1rem; margin-bottom: 1rem; }
+    .tier-card { border: 2px solid var(--border); position: relative; }
+    .tier-card.featured { border-color: var(--primary); background: #eff6ff; }
+    .badge { position: absolute; top: 10px; right: 10px; background: var(--primary); color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: bold; }
+
     input, select, button { width: 100%; padding: 0.75rem; margin-top: 0.5rem; border-radius: 6px; border: 1px solid var(--border); font-size: 1rem; }
     button.btn-primary { background: var(--primary); color: white; border: none; font-weight: bold; cursor: pointer; }
     button.btn-success { background: var(--success); color: white; border: none; font-weight: bold; cursor: pointer; }
@@ -91,6 +95,8 @@
     .chat-msg { margin-bottom: 0.5rem; padding: 0.5rem; border-radius: 6px; }
     .chat-bot { background: #e0e7ff; color: #1e40af; }
     .chat-user { background: #dcfce7; color: #166534; text-align: right; }
+
+    .locked-banner { background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; text-align: center; }
   </style>
 </head>
 <body>
@@ -116,7 +122,6 @@
         <option value="CashApp">CashApp</option>
       </select>
 
-      <!-- Dynamic QR Code Container -->
       <div id="qr-box" class="qr-container">
         <p id="qr-title" style="font-weight: bold; margin-bottom: 0.5rem;"></p>
         <img id="qr-img" src="" alt="Payment QR Code" />
@@ -127,10 +132,16 @@
     </div>
   </section>
 
-  <!-- VIEW 2: AI NEGOTIATION / OFFERS -->
+  <!-- VIEW 2: AI NEGOTIATION / OFFERS (PRO FEATURE) -->
   <section id="negotiate-view" class="view">
     <h2>Make an Offer</h2>
-    <div class="card">
+    <div id="negotiate-lock" class="locked-banner" style="display: none;">
+      <strong>🔒 Pro Feature Locked</strong><br>
+      Automated AI negotiation is available on Pro & Organizer plans.
+      <button class="btn-primary" style="margin-top: 0.5rem;" onclick="switchTab('plans-view', document.querySelectorAll('.nav-btn')[4])">Upgrade Plan</button>
+    </div>
+
+    <div id="negotiate-content" class="card">
       <label>Select Item:</label>
       <select id="negotiate-item-select" onchange="resetChat()"></select>
       
@@ -151,9 +162,10 @@
 
   <!-- VIEW 4: INVENTORY & SETTINGS -->
   <section id="inventory-view" class="view">
-    <h2>Payment Settings</h2>
+    <h2>Current Plan: <span id="current-tier-display" style="color: var(--primary);">Free</span></h2>
+    
     <div class="card">
-      <h3>Digital Handles</h3>
+      <h3>Digital Handles (Pro/Organizer)</h3>
       <input type="text" id="venmo-handle" placeholder="Venmo Username (e.g. John-Doe)" />
       <input type="text" id="cashapp-tag" placeholder="CashApp Tag (e.g. $JohnDoe)" />
       <button class="btn-primary" onclick="saveHandles()">Save Handles</button>
@@ -174,12 +186,65 @@
     </div>
   </section>
 
+  <!-- VIEW 5: SUBSCRIPTION PLANS / MONETIZATION -->
+  <section id="plans-view" class="view">
+    <h2>Choose Your Plan</h2>
+    <p style="font-size:0.9rem; color:#64748b; margin-bottom:1rem;">Payments process directly to the owner account.</p>
+
+    <!-- Tier 1: Free -->
+    <div class="card tier-card">
+      <h3>Free Casual Host</h3>
+      <p style="font-size: 1.2rem; font-weight: bold; margin: 0.5rem 0;">$0 / month</p>
+      <ul style="font-size:0.85rem; padding-left: 1.2rem; color: #475569;">
+        <li>Up to 25 Inventory Items</li>
+        <li>Basic POS Cash Checkout</li>
+        <li>Standard Map Location</li>
+      </ul>
+      <button class="btn-primary" style="background:#64748b;" onclick="activateTier('Free', '')">Select Free Plan</button>
+    </div>
+
+    <!-- Tier 2: Pro Host -->
+    <div class="card tier-card featured">
+      <span class="badge">POPULAR</span>
+      <h3>Pro Host</h3>
+      <p style="font-size: 1.2rem; font-weight: bold; margin: 0.5rem 0;">$9.99 / month</p>
+      <ul style="font-size:0.85rem; padding-left: 1.2rem; color: #475569;">
+        <li>Unlimited Inventory Items</li>
+        <li>Venmo & CashApp QR Code Display</li>
+        <li>Automated AI Negotiator</li>
+        <li>CSV Export & Sales Reports</li>
+      </ul>
+      <button class="btn-primary" onclick="subscribe('Pro', 'https://buy.stripe.com/your-pro-link')">Buy Pro Plan ($9.99)</button>
+    </div>
+
+    <!-- Tier 3: Market Organizer -->
+    <div class="card tier-card">
+      <h3>Market Organizer</h3>
+      <p style="font-size: 1.2rem; font-weight: bold; margin: 0.5rem 0;">$24.99 / month</p>
+      <ul style="font-size:0.85rem; padding-left: 1.2rem; color: #475569;">
+        <li>All Pro Features</li>
+        <li>Multi-Seller Consignment Splits</li>
+        <li>Featured Map Pin Placement</li>
+        <li>Priority Support</li>
+      </ul>
+      <button class="btn-primary" onclick="subscribe('Organizer', 'https://buy.stripe.com/your-organizer-link')">Buy Organizer Plan ($24.99)</button>
+    </div>
+
+    <!-- License Key Unlock Box -->
+    <div class="card">
+      <h3>Have an Activation Key?</h3>
+      <input type="text" id="license-key" placeholder="Enter key (e.g., PRO-1234)" />
+      <button class="btn-success" onclick="verifyKey()">Activate Key</button>
+    </div>
+  </section>
+
   <!-- NAVIGATION -->
   <nav>
     <button class="nav-btn active" onclick="switchTab('pos-view', this)">🛒 POS</button>
     <button class="nav-btn" onclick="switchTab('negotiate-view', this)">🤝 Negotiate</button>
     <button class="nav-btn" onclick="switchTab('map-view', this)">🗺️ Map</button>
-    <button class="nav-btn" onclick="switchTab('inventory-view', this)">📦 Settings</button>
+    <button class="nav-btn" onclick="switchTab('inventory-view', this)">📦 Inventory</button>
+    <button class="nav-btn" onclick="switchTab('plans-view', this)">⭐ Plans</button>
   </nav>
 
   <!-- Leaflet JS -->
@@ -187,6 +252,7 @@
 
   <script>
     // App State
+    let currentTier = localStorage.getItem('ys_tier') || 'Free';
     let items = JSON.parse(localStorage.getItem('ys_items')) || [
       { id: 1, name: 'Tool Box', price: 20.00, minPrice: 15.00, sold: false },
       { id: 2, name: 'Lawn Mower', price: 50.00, minPrice: 35.00, sold: false }
@@ -196,9 +262,10 @@
     let mapInitialized = false;
     let map;
 
-    // Load saved handles into input fields
+    // Load saved settings
     document.getElementById('venmo-handle').value = handles.venmo || '';
     document.getElementById('cashapp-tag').value = handles.cashapp || '';
+    updateTierUI();
 
     // Save State
     function saveData() {
@@ -209,12 +276,58 @@
     }
 
     function saveHandles() {
+      if (currentTier === 'Free') {
+        alert('Digital payment QR codes require a Pro or Organizer plan.');
+        return;
+      }
       let v = document.getElementById('venmo-handle').value.trim().replace('@', '');
       let c = document.getElementById('cashapp-tag').value.trim().replace('$', '');
       handles = { venmo: v, cashapp: c };
       localStorage.setItem('ys_handles', JSON.stringify(handles));
       alert('Payment handles saved successfully!');
       updateQROverlay();
+    }
+
+    // Monetization & Tier Functions
+    function updateTierUI() {
+      document.getElementById('current-tier-display').innerText = currentTier;
+      
+      const negLock = document.getElementById('negotiate-lock');
+      const negContent = document.getElementById('negotiate-content');
+
+      if (currentTier === 'Free') {
+        negLock.style.display = 'block';
+        negContent.style.opacity = '0.3';
+        negContent.style.pointerEvents = 'none';
+      } else {
+        negLock.style.display = 'none';
+        negContent.style.opacity = '1';
+        negContent.style.pointerEvents = 'auto';
+      }
+    }
+
+    function subscribe(tierName, paymentUrl) {
+      alert(`Redirecting to payment checkout for ${tierName} Plan...`);
+      // Open your Stripe or PayPal payment link
+      window.open(paymentUrl, '_blank');
+    }
+
+    function verifyKey() {
+      const key = document.getElementById('license-key').value.trim().toUpperCase();
+      if (key.startsWith('PRO')) {
+        activateTier('Pro');
+      } else if (key.startsWith('ORG')) {
+        activateTier('Organizer');
+      } else {
+        alert('Invalid activation key. Please enter a valid key or purchase a plan.');
+      }
+    }
+
+    function activateTier(tierName) {
+      currentTier = tierName;
+      localStorage.setItem('ys_tier', tierName);
+      updateTierUI();
+      alert(`Plan updated to ${tierName}!`);
     }
 
     // Navigation Logic
@@ -273,7 +386,7 @@
       const qrImg = document.getElementById('qr-img');
       const qrHandle = document.getElementById('qr-handle');
 
-      if (method === 'Cash' || cart.length === 0) {
+      if (method === 'Cash' || cart.length === 0 || currentTier === 'Free') {
         qrBox.style.display = 'none';
         return;
       }
@@ -285,9 +398,8 @@
         if (!handles.venmo) {
           qrBox.style.display = 'block';
           qrTitle.innerText = 'Venmo Selected';
-          qrImg.src = '';
           qrImg.style.display = 'none';
-          qrHandle.innerText = 'Please set your Venmo username in Settings tab.';
+          qrHandle.innerText = 'Please set your Venmo username in Inventory/Settings tab.';
           return;
         }
         url = `https://venmo.com/${handles.venmo}`;
@@ -297,9 +409,8 @@
         if (!handles.cashapp) {
           qrBox.style.display = 'block';
           qrTitle.innerText = 'CashApp Selected';
-          qrImg.src = '';
           qrImg.style.display = 'none';
-          qrHandle.innerText = 'Please set your CashApp Tag in Settings tab.';
+          qrHandle.innerText = 'Please set your CashApp Tag in Inventory/Settings tab.';
           return;
         }
         url = `https://cash.app/$${handles.cashapp}`;
@@ -307,7 +418,6 @@
         qrTitle.innerText = 'Scan to Pay with CashApp';
       }
 
-      // Generate dynamic QR code image via free QR generator API
       qrImg.style.display = 'inline-block';
       qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(url)}`;
       qrHandle.innerText = text;
@@ -329,6 +439,11 @@
 
     // Inventory Functions
     function addItem() {
+      if (currentTier === 'Free' && items.length >= 25) {
+        alert('Free tier limit reached (25 items). Please upgrade to Pro for unlimited listings.');
+        return;
+      }
+
       const name = document.getElementById('item-name').value;
       const price = parseFloat(document.getElementById('item-price').value);
       let minPrice = parseFloat(document.getElementById('item-min-price').value);
