@@ -53,7 +53,7 @@
       padding: 0.75rem 0;
       border: none;
       background: none;
-      font-size: 0.85rem;
+      font-size: 0.75rem;
       font-weight: 600;
       color: #64748b;
       cursor: pointer;
@@ -80,7 +80,13 @@
     .item-tile.sold { opacity: 0.5; pointer-events: none; text-decoration: line-through; }
     
     /* Map Layout */
-    #map { height: 60vh; width: 100%; border-radius: 8px; border: 1px solid var(--border); }
+    #map { height: 50vh; width: 100%; border-radius: 8px; border: 1px solid var(--border); }
+
+    /* Chat / Offer Box */
+    .chat-box { background: #f1f5f9; border: 1px solid var(--border); border-radius: 8px; padding: 0.75rem; height: 180px; overflow-y: auto; margin-bottom: 1rem; font-size: 0.9rem; }
+    .chat-msg { margin-bottom: 0.5rem; padding: 0.5rem; border-radius: 6px; }
+    .chat-bot { background: #e0e7ff; color: #1e40af; }
+    .chat-user { background: #dcfce7; color: #166534; text-align: right; }
   </style>
 </head>
 <body>
@@ -110,19 +116,36 @@
     </div>
   </section>
 
-  <!-- VIEW 2: MAP & ROUTE -->
+  <!-- VIEW 2: AI NEGOTIATION / OFFERS -->
+  <section id="negotiate-view" class="view">
+    <h2>Make an Offer</h2>
+    <div class="card">
+      <label>Select Item:</label>
+      <select id="negotiate-item-select" onchange="resetChat()"></select>
+      
+      <div style="margin-top: 1rem;" class="chat-box" id="chat-history">
+        <div class="chat-msg chat-bot">Select an item above and enter an offer below to start negotiating!</div>
+      </div>
+
+      <input type="number" id="offer-amount" placeholder="Enter offer amount ($)" step="1" />
+      <button class="btn-primary" onclick="submitOffer()">Submit Offer</button>
+    </div>
+  </section>
+
+  <!-- VIEW 3: MAP & ROUTE -->
   <section id="map-view" class="view">
     <h2>Nearby Sales & Route</h2>
     <div id="map" style="margin-top: 1rem;"></div>
   </section>
 
-  <!-- VIEW 3: INVENTORY MANAGEMENT -->
+  <!-- VIEW 4: INVENTORY MANAGEMENT -->
   <section id="inventory-view" class="view">
     <h2>Inventory</h2>
     <div class="card">
       <h3>Add Item</h3>
       <input type="text" id="item-name" placeholder="Item Name (e.g., Circular Saw)" />
-      <input type="number" id="item-price" placeholder="Price ($)" step="0.01" />
+      <input type="number" id="item-price" placeholder="Asking Price ($)" step="0.01" />
+      <input type="number" id="item-min-price" placeholder="Bottom Dollar / Min Price ($)" step="0.01" />
       <button class="btn-primary" onclick="addItem()">Add to Listing</button>
     </div>
 
@@ -135,6 +158,7 @@
   <!-- NAVIGATION -->
   <nav>
     <button class="nav-btn active" onclick="switchTab('pos-view', this)">🛒 POS</button>
+    <button class="nav-btn" onclick="switchTab('negotiate-view', this)">🤝 Negotiate</button>
     <button class="nav-btn" onclick="switchTab('map-view', this)">🗺️ Map</button>
     <button class="nav-btn" onclick="switchTab('inventory-view', this)">📦 Inventory</button>
   </nav>
@@ -145,8 +169,8 @@
   <script>
     // App State
     let items = JSON.parse(localStorage.getItem('ys_items')) || [
-      { id: 1, name: 'Tool Box', price: 15.00, sold: false },
-      { id: 2, name: 'Lawn Mower', price: 45.00, sold: false }
+      { id: 1, name: 'Tool Box', price: 20.00, minPrice: 15.00, sold: false },
+      { id: 2, name: 'Lawn Mower', price: 50.00, minPrice: 35.00, sold: false }
     ];
     let cart = [];
     let mapInitialized = false;
@@ -157,6 +181,7 @@
       localStorage.setItem('ys_items', JSON.stringify(items));
       renderPOS();
       renderInventory();
+      populateNegotiateDropdown();
     }
 
     // Navigation Logic
@@ -169,6 +194,9 @@
 
       if (viewId === 'map-view' && !mapInitialized) {
         initMap();
+      }
+      if (viewId === 'negotiate-view') {
+        populateNegotiateDropdown();
       }
     }
 
@@ -220,37 +248,106 @@
     function addItem() {
       const name = document.getElementById('item-name').value;
       const price = parseFloat(document.getElementById('item-price').value);
-      if (!name || isNaN(price)) return alert('Enter valid name and price');
+      let minPrice = parseFloat(document.getElementById('item-min-price').value);
+      
+      if (!name || isNaN(price)) return alert('Enter valid item name and price');
+      if (isNaN(minPrice)) minPrice = price; // Default minPrice to asking price if left blank
 
-      items.push({ id: Date.now(), name, price, sold: false });
+      items.push({ id: Date.now(), name, price, minPrice, sold: false });
       document.getElementById('item-name').value = '';
       document.getElementById('item-price').value = '';
+      document.getElementById('item-min-price').value = '';
       saveData();
     }
 
     function renderInventory() {
       const container = document.getElementById('inventory-list');
       container.innerHTML = items.map(i => `
-        <div style="display:flex; justify-content:space-between; padding: 0.5rem 0; border-bottom: 1px solid #e2e8f0;">
-          <span>${i.name} (${i.sold ? '<strong>SOLD</strong>' : 'Available'})</span>
-          <span>$${i.price.toFixed(2)}</span>
+        <div style="padding: 0.5rem 0; border-bottom: 1px solid #e2e8f0;">
+          <div style="display:flex; justify-content:space-between;">
+            <span><strong>${i.name}</strong> (${i.sold ? 'SOLD' : 'Available'})</span>
+            <span>$${i.price.toFixed(2)}</span>
+          </div>
+          <div style="font-size:0.8rem; color:#64748b;">Bottom Dollar: $${(i.minPrice || i.price).toFixed(2)}</div>
         </div>
       `).join('');
+    }
+
+    // AI Negotiation / Offer Logic
+    function populateNegotiateDropdown() {
+      const select = document.getElementById('negotiate-item-select');
+      const availableItems = items.filter(i => !i.sold);
+      
+      if (availableItems.length === 0) {
+        select.innerHTML = '<option value="">No available items</option>';
+        return;
+      }
+
+      select.innerHTML = availableItems.map(i => `
+        <option value="${i.id}">${i.name} (Asking: $${i.price.toFixed(2)})</option>
+      `).join('');
+      resetChat();
+    }
+
+    function resetChat() {
+      const chat = document.getElementById('chat-history');
+      const itemId = document.getElementById('negotiate-item-select').value;
+      const item = items.find(i => i.id == itemId);
+
+      if (item) {
+        chat.innerHTML = `<div class="chat-msg chat-bot">Looking at <strong>${item.name}</strong>. Asking price is $${item.price.toFixed(2)}. Make an offer!</div>`;
+      } else {
+        chat.innerHTML = `<div class="chat-msg chat-bot">No items available for negotiation.</div>`;
+      }
+    }
+
+    function submitOffer() {
+      const itemId = document.getElementById('negotiate-item-select').value;
+      const offerInput = document.getElementById('offer-amount');
+      const offer = parseFloat(offerInput.value);
+      const chat = document.getElementById('chat-history');
+      const item = items.find(i => i.id == itemId);
+
+      if (!item || isNaN(offer) || offer <= 0) return alert('Please enter a valid offer.');
+
+      // Add User Message
+      chat.innerHTML += `<div class="chat-msg chat-user">I'll offer $${offer.toFixed(2)}</div>`;
+      offerInput.value = '';
+
+      // AI Logic Evaluation
+      const minPrice = item.minPrice || item.price;
+      
+      setTimeout(() => {
+        if (offer >= item.price) {
+          chat.innerHTML += `<div class="chat-msg chat-bot">Deal! Offer of $${offer.toFixed(2)} accepted at or above asking price. Item added to cart!</div>`;
+          addToCart(item);
+        } else if (offer >= minPrice) {
+          chat.innerHTML += `<div class="chat-msg chat-bot">Deal accepted! $${offer.toFixed(2)} meets the reserve. Item added to cart!</div>`;
+          addToCart(item);
+        } else {
+          // Calculate Counter Offer halfway between offer and asking price
+          const counter = Math.ceil((item.price + minPrice) / 2);
+          if (offer < minPrice * 0.6) {
+            chat.innerHTML += `<div class="chat-msg chat-bot">That's a bit too low for ${item.name}. Lowest we can do is $${counter.toFixed(2)}.</div>`;
+          } else {
+            chat.innerHTML += `<div class="chat-msg chat-bot">I can't do $${offer.toFixed(2)}, but I could let it go for $${counter.toFixed(2)}. Deal?</div>`;
+          }
+        }
+        chat.scrollTop = chat.scrollHeight;
+      }, 400);
     }
 
     // Map Functions
     function initMap() {
       mapInitialized = true;
-      // Default center: Lowell, MA area (42.6334, -71.3162)
       map = L.map('map').setView([42.6334, -71.3162], 13);
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
         attribution: '© OpenStreetMap'
       }).addTo(map);
 
-      // Example sale location marker
       L.marker([42.6334, -71.3162]).addTo(map)
-        .bindPopup('<b>Active Yard Sale</b><br>123 Main St<br>Tools, Furniture, Electronics')
+        .bindPopup('<b>Active Yard Sale</b><br>Lowell, MA<br>Tools, Furniture, Hardware')
         .openPopup();
     }
 
